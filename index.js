@@ -8,15 +8,22 @@ import { getAIResponse, getAIVisionResponse } from "./src/gemini.js";
 // setup database
 const db = await setupDatabase();
 
-
 const client = new Client({
     authStrategy: new LocalAuth(),
+    authTimeoutMs: 120000,
     puppeteer: {
         headless: true,
-        executablePath: '/usr/bin/google-chrome',
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        executablePath: '/usr/bin/google-chrome', 
+        args: [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox', 
+            '--disable-dev-shm-usage'
+        ]
     },
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    webVersionCache: {
+        type: "none"
+    },
+    userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36'
 });
 
 // clean up puppeteer on exit/nodemon restart to prevent execution context destroyed
