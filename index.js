@@ -51,37 +51,41 @@ client.on("ready", () => {
 
 client.on("message", async (msg) => {
     const contact = await msg.getContact();
-    console.log(`MESSAGE RECEIVED from ${contact.number} : ${msg.body}`);
-
     const whatsappId = msg.from;
     const name = contact.pushname || contact.name || "الطالب";
 
-    // search the student in db and if not found create a new student
+    // 1. Database management (find or create student)
     let applicant = await db.get('SELECT * FROM applicants WHERE whatsapp_id = ?', [whatsappId]);
     if (!applicant) {
         await db.run('INSERT INTO applicants (whatsapp_id, name, current_step) VALUES (?,?,?)', [whatsappId, name, 'inquiry']);
         applicant = await db.get('SELECT * FROM applicants WHERE whatsapp_id = ?', [whatsappId]);
-        console.log("new student added")
+        console.log("new student added");
     }
-    // scholarship data
-    const scholarships = await db.all('SELECT * FROM scholarships');
-    console.log("scholarships data ", scholarships)
-    const aiReply = await getAIResponse(msg.body, scholarships, applicant?.name);
-    console.log("aiReply", aiReply)
-    msg.reply(aiReply);
+
+    // 2. Check: is the message an image?
     if (msg.hasMedia) {
         const media = await msg.downloadMedia();
-        console.log("media", media)
 
-
-        if(media.mimetype.startsWith('image/')){
-            console.log("processing image ...")
-            msg.reply("جاري معالجة الصورة ...")
-            const visionReply = await getAIVisionResponse(media.data,media.mimetype);
-            console.log("visionReply", visionReply)
-            msg.reply(visionReply);
+        if (media.mimetype.startsWith('image/')) {
+            console.log("processing image ...");
+            // الرد الأول والوحيد قبل المعالجة
+            await msg.reply("جاري معالجة الصورة واستخراج بيانات الجواز... ثواني يا غالي");
+            
+            // Process image via Gemini Vision
+            const visionReply = await getAIVisionResponse(media.data, media.mimetype);
+            console.log("visionReply", visionReply);
+            
+            // Send final result
+            return msg.reply(visionReply); 
         }
     }
+
+    // 3. If not an image (plain text message), generate AI text reply
+    const scholarships = await db.all('SELECT * FROM scholarships');
+    const aiReply = await getAIResponse(msg.body, scholarships, applicant?.name);
+    
+    console.log("aiReply", aiReply);
+    msg.reply(aiReply);
 });
 
 client.initialize();

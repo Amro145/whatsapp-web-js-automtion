@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// 1. إعداد Gemini بمفتاح الـ API
+// 1. Setup Gemini with API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ 
     model: "gemini-2.5-flash",     
@@ -14,10 +14,10 @@ const model = genAI.getGenerativeModel({
     - إذا سأل الطالب عن منحة غير موجودة، اعتذر منه بلطف وقل له سنقوم بتوفيرها قريباً.`
 });
 
-// 2. دالة توليد الرد الذكي
+// 2. Generate AI text reply
 export async function getAIResponse(userMessage, scholarshipData) {
     try {
-        // ندمج بيانات المنحة مع رسالة المستخدم عشان الـ AI يعرف يرد منها
+        // Merge scholarship data with user message so the AI can answer from it
         const prompt = `
         بيانات المنح المتاحة حالياً في الوكالة:
         ${JSON.stringify(scholarshipData)}
@@ -33,6 +33,8 @@ export async function getAIResponse(userMessage, scholarshipData) {
         return "عذراً يا غالي، حصل ضغط شوية، ممكن ترسل رسالتك تاني؟";
     }
 }
+
+// 3. Analyze image via Gemini Vision
 export async function getAIVisionResponse(base64Data, mimeType) {
     try {
         const imagePart = {
