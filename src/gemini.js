@@ -7,24 +7,26 @@ dotenv.config();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
-    systemInstruction: `أنت موظف محترف في وكالة "دراسة للسودان" التعليمية. 
-    مهمتك مساعدة الطلاب في الاستفسار عن المنح والتقديم لها.
-    - رد بلهجة سودانية مهذبة واحترافية (أو عربية فصحى بسيطة).
-    - اعتمد فقط على المعلومات التي سأزودك بها من قاعدة البيانات.
-    - إذا سأل الطالب عن منحة غير موجودة، اعتذر منه بلطف وقل له سنقوم بتوفيرها قريباً.`
+    systemInstruction: `أنت صيدلاني محترف في صيدلية "الشفاء". 
+    مهمتك مساعدة العملاء في الاستفسار عن الأدوية المتوفرة وأسعارها.
+    - رد بلهجة سودانية مهذبة وودودة (أو عربية فصحى بسيطة).
+    - اعتمد فقط على بيانات الأدوية التي سأزودك بها من قاعدة البيانات.
+    - إذا سأل العميل عن دواء غير موجود في المخزون، اعتذر منه بلطف وقل له سنقوم بتوفيره قريباً.
+    - إذا كان الدواء يحتاج روشتة طبية، نبّه العميل لإحضار الروشتة قبل الصرف.
+    - لا تقدم نصائح طبية خارج نطاق بيانات الأدوية المتاحة.`
 });
 
 // Generate AI text reply
-export async function getAIResponse(userMessage, scholarshipData, applicantName) {
+export async function getAIResponse(userMessage, medicineData, customerName) {
     try {
         const prompt = `
-        بيانات المنح المتاحة حالياً في الوكالة:
-        ${JSON.stringify(scholarshipData)}
+        بيانات الأدوية المتوفرة حالياً في الصيدلية:
+        ${JSON.stringify(medicineData)}
         
-        اسم الطالب: ${applicantName || 'غير معروف'}
-        رسالة الطالب: "${userMessage}"
+        اسم العميل: ${customerName || 'عميلنا العزيز'}
+        رسالة العميل: "${userMessage}"
         
-        بناءً على البيانات أعلاه، رد على الطالب:`;
+        بناءً على البيانات أعلاه، رد على العميل:`;
 
         const result = await model.generateContent(prompt);
         return result.response.text();
@@ -34,7 +36,7 @@ export async function getAIResponse(userMessage, scholarshipData, applicantName)
     }
 }
 
-// Analyze image via Gemini Vision and return parsed JSON object
+// Analyze a prescription (Roshetta) image via Gemini Vision — returns parsed JSON or null
 export async function getAIVisionResponse(base64Data, mimeType) {
     try {
         const imagePart = {
@@ -44,15 +46,15 @@ export async function getAIVisionResponse(base64Data, mimeType) {
             }
         };
 
-        const prompt = `حلل هذه الصورة واستخرج البيانات ككائن JSON فقط بدون أي نص إضافي:
+        const prompt = `حلل هذه الصورة وحدد إذا كانت روشتة طبية، ثم استخرج البيانات ككائن JSON فقط بدون أي نص إضافي:
         {
-          "type": "passport" أو "high_school_certificate" أو "birth_certificate",
-          "name": "الاسم الكامل المكتوب في المستند",
-          "birth_date": "تاريخ الميلاد إن وجد",
-          "is_valid": true/false
+          "is_prescription": true/false,
+          "detected_medicines": ["اسم الدواء 1", "اسم الدواء 2"],
+          "doctor_name": "اسم الطبيب إن وجد",
+          "is_clear": true/false
         }
-        - إذا كان المستند غير واضح أو غير مدعوم اجعل is_valid: false.
-        - تأكد من استخراج الاسم بدقة كما هو مكتوب.
+        - إذا كانت الصورة غير واضحة أو ليست روشتة، اجعل is_prescription: false و is_clear: false.
+        - استخرج أسماء الأدوية كما هي مكتوبة في الروشتة.
         - أرجع JSON فقط بدون markdown أو backticks.`;
 
         const result = await model.generateContent([prompt, imagePart]);

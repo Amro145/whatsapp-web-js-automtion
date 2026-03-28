@@ -1,0 +1,50 @@
+[
+  {
+    "trade_name": "Panadol Joint",
+    "generic_name": "Paracetamol",
+    "price": 4500,
+    "stock_quantity": 50,
+    "category": "Painkillers",
+    "prescription_required": false
+  },
+  {
+    "trade_name": "Amoxil",
+    "generic_name": "Amoxicillin",
+    "price": 3200,
+    "stock_quantity": 20,
+    "category": "Antibiotics",
+    "prescription_required": true
+  },
+  {
+    "trade_name": "Augmentin 1g",
+    "generic_name": "Amoxicillin + Clavulanic acid",
+    "price": 8500,
+    "stock_quantity": 15,
+    "category": "Antibiotics",
+    "prescription_required": true
+  },
+  {
+    "trade_name": "Ventolin Evohaler",
+    "generic_name": "Salbutamol",
+    "price": 5200,
+    "stock_quantity": 10,
+    "category": "Asthma",
+    "prescription_required": false
+  },
+  {
+    "trade_name": "Solpadeine",
+    "generic_name": "Paracetamol + Caffeine + Codeine",
+    "price": 3800,
+    "stock_quantity": 30,
+    "category": "Painkillers",
+    "prescription_required": false
+  },
+  {
+    "trade_name": "Gaviscon",
+    "generic_name": "Sodium Alginate",
+    "price": 4200,
+    "stock_quantity": 25,
+    "category": "Antacids",
+    "prescription_required": false
+  }
+]
