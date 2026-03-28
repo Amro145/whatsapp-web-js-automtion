@@ -1,0 +1,53 @@
+# ─── Cloudflare Workers + Containers Configuration ────────────────────────────
+# Docs: https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/
+# Containers Docs: https://developers.cloudflare.com/containers/
+
+name               = "pharmacy-bot"
+main               = "worker.js"
+compatibility_date = "2025-01-01"
+
+# ─── Containers ───────────────────────────────────────────────────────────────
+# Cloudflare Containers run inside Durable Objects.
+# class_name MUST match the DO binding class_name below and the [[migrations]] entry.
+[[containers]]
+class_name    = "PharmacyBotContainer"   # Links this container to the Durable Object class
+image         = "./Dockerfile"           # Wrangler builds this from the local Dockerfile on deploy
+max_instances = 1                        # WhatsApp session is stateful — keep it a single instance
+
+# ─── Durable Object Bindings ──────────────────────────────────────────────────
+# The Worker script uses this binding to spin up / communicate with the container.
+[[durable_objects.bindings]]
+name       = "PHARMACY_BOT"             # env.PHARMACY_BOT in your Worker entrypoint
+class_name = "PharmacyBotContainer"     # must match [[containers]] class_name above
+
+# ─── Migrations ───────────────────────────────────────────────────────────────
+# Required whenever a new Durable Object class is introduced.
+[[migrations]]
+tag               = "v1"
+new_sqlite_classes = ["PharmacyBotContainer"]
+
+# ─── Environment Variables ────────────────────────────────────────────────────
+# Plain-text, non-sensitive vars only.
+[vars]
+MY_PERSONAL_NUMBER = "249965158196@c.us"
+
+# ─── Secrets ──────────────────────────────────────────────────────────────────
+# GEMINI_API_KEY is sensitive — do NOT add it here.
+# Register it once via CLI (Cloudflare encrypts and injects it at runtime):
+#
+#   npx wrangler secret put GEMINI_API_KEY
+#
+# It will be available inside the container as process.env.GEMINI_API_KEY.
+
+# ─── Cloudflare D1 Database (Optional / Future Migration) ─────────────────────
+# The bot currently uses a local SQLite file (pharmacy.db) inside the container.
+# To migrate to Cloudflare D1 (globally replicated SQL):
+#   1. Run: npx wrangler d1 create pharmacy-db
+#   2. Paste the returned database_id below.
+#   3. Uncomment this block.
+#   4. Update src/schema.js to use the D1 binding (env.DB) instead of sqlite3.
+#
+# [[d1_databases]]
+# binding       = "DB"
+# database_name = "pharmacy-db"
+# database_id   = "your-d1-database-id-here"
