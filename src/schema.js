@@ -2,15 +2,14 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 
 
-// connection between nodejs and sqlite
+// Open connection to SQLite database
 export async function setupDatabase() {
     const db = await open({
         filename: './agency.db',
         driver: sqlite3.Database
     });
 
-    // create Tables
-    // scholarships table
+    // Create scholarships table
     await db.exec(`
        CREATE TABLE IF NOT EXISTS scholarships (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,21 +19,30 @@ export async function setupDatabase() {
                 requirements TEXT
             )
         `);
-    // users table
+
+    // Create applicants table
     await db.exec(`
             CREATE TABLE IF NOT EXISTS applicants (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 whatsapp_id TEXT UNIQUE,
                 name TEXT,
+                official_name TEXT,
                 current_step TEXT DEFAULT 'inquiry',
                 docs_status TEXT DEFAULT 'none',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
 
-    // add sample data
-    const scholarshipCount = await db.get('SELECT COUNT(*) as count FROM scholarships');
-    if (scholarshipCount.count === 0) {
+    // Migrate: add official_name column if it doesn't exist (for existing databases)
+    try {
+        await db.exec(`ALTER TABLE applicants ADD COLUMN official_name TEXT`);
+    } catch (_) {
+        // Column already exists, ignore
+    }
+
+    // Seed sample scholarship data if table is empty
+    const { count } = await db.get('SELECT COUNT(*) as count FROM scholarships');
+    if (count === 0) {
         await db.run(`
                 INSERT INTO scholarships (university, country, details, requirements)
                 VALUES (
@@ -44,10 +52,10 @@ export async function setupDatabase() {
                     'جواز سفر ساري المفعول، الشهادة السودانية، وصورة شخصية.'
                 )
             `);
-        console.log("added scholarship")
+        console.log('✅ Sample scholarship added.');
     }
 
-    console.log('✅ database is ready in ES Modules');
+    console.log('✅ Database is ready.');
 
     return db;
 }
