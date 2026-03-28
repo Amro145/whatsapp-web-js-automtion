@@ -5,8 +5,8 @@ dotenv.config();
 
 // 1. Setup Gemini with API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ 
-    model: "gemini-2.5-flash",     
+const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
     systemInstruction: `أنت موظف محترف في وكالة "دراسة للسودان" التعليمية. 
     مهمتك مساعدة الطلاب في الاستفسار عن المنح والتقديم لها.
     - رد بلهجة سودانية مهذبة واحترافية (أو عربية فصحى بسيطة).
@@ -43,9 +43,16 @@ export async function getAIVisionResponse(base64Data, mimeType) {
                 mimeType: mimeType
             }
         };
-
-        const prompt = "حلل هذه الصورة. إذا كانت جواز سفر، استخرج (الاسم الكامل، رقم الجواز، تاريخ الميلاد، تاريخ الانتهاء). إذا لم تكن مستنداً رسمياً، أخبر المستخدم بذلك بلطف.";
-
+        const prompt = `حلل هذه الصورة واستخرج البيانات ككائن JSON فقط:
+        {
+          "type": "passport" أو "high_school_certificate" أو "birth_certificate",
+          "name": "الاسم الكامل المكتوب في المستند",
+          "birth_date": "تاريخ الميلاد إن وجد",
+          "is_valid": true/false
+        }
+        - إذا كان المستند غير واضح أو غير مدعوم اجعل is_valid: false.
+        - تأكد من استخراج الاسم بدقة كما هو مكتوب.`;
+        
         const result = await model.generateContent([prompt, imagePart]);
         return result.response.text();
     } catch (error) {
