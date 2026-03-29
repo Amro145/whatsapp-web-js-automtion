@@ -38,6 +38,17 @@ export async function setupDatabase() {
         )
     `);
 
+    // Create messages table to store conversation history
+    await db.exec(`
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            whatsapp_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
     // Seed medicine data from data.json if table is empty
     const { count } = await db.get('SELECT COUNT(*) as count FROM medicines');
     if (count === 0) {

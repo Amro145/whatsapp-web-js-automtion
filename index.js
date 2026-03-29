@@ -58,9 +58,25 @@ client.on("ready", () => {
 
 // ─── Message Handler ──────────────────────────────────────────────────────────
 client.on("message", async (msg) => {
+    // 1. Self-Reply Guard
+    if (msg.fromMe) return;
+
     const contact = await msg.getContact();
     const whatsappId = msg.from;
     const name = contact.pushname || contact.name || "العميل";
+
+    // 2. Bot-Loop Guard
+    if (name.toLowerCase().includes('bot') || msg.body.startsWith('!bot') || msg.body.startsWith('/')) {
+        console.log(`Ignored possible bot message from: ${name}`);
+        return;
+    }
+
+    // 3. Message Filtering (Ignore stickers, locations, reactions, etc.)
+    if (msg.type !== 'chat' && msg.type !== 'image' && msg.type !== 'document') {
+        console.log(`Ignored unsupported message type: ${msg.type}`);
+        // Optionally reply if you want: await msg.reply("عذراً، لا أستطيع معالجة هذا النوع من الرسائل.");
+        return;
+    }
 
     // Find or create customer record
     let customer = await db.get('SELECT * FROM customers WHERE whatsapp_id = ?', [whatsappId]);
@@ -126,8 +142,32 @@ client.on("message", async (msg) => {
     }
 
     // ── Handle text messages with AI ──────────────────────────────────────────
+    if (msg.hasMedia) {
+        // Prevent audio/video messages from falling through into text prompts
+        await msg.reply("عذراً، أنا حالياً بأستقبل صور الروشتات أو الرسائل النصية بس.");
+        return;
+    }
+
     const medicines = await db.all('SELECT * FROM medicines');
-    const aiReply = await getAIResponse(msg.body, medicines, customer?.name);
+
+    // Fetch the last 10 messages for conversation memory
+    const rawHistory = await db.all(
+        'SELECT role, content FROM (SELECT id, role, content FROM messages WHERE whatsapp_id = ? ORDER BY id DESC LIMIT 10) ORDER BY id ASC',
+        [whatsappId]
+    );
+
+    // Reply via AI with memory injected
+    const aiReply = await getAIResponse(msg.body, medicines, customer?.name, rawHistory);
+
+    // Save the conversation context to memory
+    await db.run(
+        'INSERT INTO messages (whatsapp_id, role, content) VALUES (?, ?, ?)',
+        [whatsappId, 'user', msg.body]
+    );
+    await db.run(
+        'INSERT INTO messages (whatsapp_id, role, content) VALUES (?, ?, ?)',
+        [whatsappId, 'model', aiReply]
+    );
 
     console.log("AI reply:", aiReply);
     await msg.reply(aiReply);

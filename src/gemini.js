@@ -6,7 +6,7 @@ dotenv.config();
 // Initialize Gemini with API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.0-flash",
     systemInstruction: `أنت صيدلاني محترف في صيدلية "الشفاء". 
     مهمتك مساعدة العملاء في الاستفسار عن الأدوية المتوفرة وأسعارها.
     - رد بلهجة سودانية مهذبة وودودة (أو عربية فصحى بسيطة).
@@ -17,20 +17,38 @@ const model = genAI.getGenerativeModel({
 });
 
 // Generate AI text reply
-export async function getAIResponse(userMessage, medicineData, customerName) {
+export async function getAIResponse(userMessage, medicineData, customerName, history = []) {
     try {
+        // Format previous history into Gemini's format
+        const formattedHistory = history.map(msg => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.content }]
+        }));
+
+        const chat = model.startChat({
+            history: formattedHistory
+        });
+
+        // Current request with pharmacy context injected
         const prompt = `
+        [سياق النظام]:
         بيانات الأدوية المتوفرة حالياً في الصيدلية:
         ${JSON.stringify(medicineData)}
         
         اسم العميل: ${customerName || 'عميلنا العزيز'}
-        رسالة العميل: "${userMessage}"
         
-        بناءً على البيانات أعلاه، رد على العميل:`;
+        رسالة العميل الحالية: "${userMessage}"
+        
+        بناءً على البيانات السابقة والرسالة الحالية ومخزون الأدوية، رد على العميل:`;
 
-        const result = await model.generateContent(prompt);
+        const result = await chat.sendMessage(prompt);
         return result.response.text();
     } catch (error) {
+        // Quota Exceeded Check
+        if (error.status === 429 || (error.message && error.message.includes('429'))) {
+            console.error("Quota Exceeded: Gemini API rate limit reached.");
+            return "عذراً يا غالي، عندنا ضغط شديد حالياً (تجاوزنا الحد المسموح). الرجاء المحاولة بعدين شوية.";
+        }
         console.error("Gemini API error:", error);
         return "عذراً يا غالي، حصل ضغط شوية، ممكن ترسل رسالتك تاني؟";
     }
